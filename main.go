@@ -1,17 +1,17 @@
 package main
 
-import "os"
+// https://wyag.thb.lt/ in Golang
 
-const DIR = ".git"
+import (
+	"os"
+
+	"github.com/google/subcommands"
+)
 
 func main() {
-	os.Open(DIR)
+	subcommands.Init()
+	switch os.Args[1] {
+	case "init":
+		doInit(os.Args[2:])
+	}
 }
-
-type blob []byte
-type tree map[]
-
-// object
-// - blob : only file contents.
-// - tree  : a directory contents (filename -> object hash)
-// - commit: commit object (tree hash, parent hash + commit info)
