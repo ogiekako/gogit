@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"gopkg.in/ini.v1"
 )
 
 // Object represents a git object.
@@ -45,14 +47,14 @@ func NewObject(repo, sha string) (Object, error) {
 		return nil, fmt.Errorf("Malformed object %s: bad length", sha)
 	}
 	switch kind {
-	case "commit":
-		return NewCommit(repo, b[y+1:])
-	case "tree":
-		return NewTree(repo, b[y+1:])
-	case "tag":
-		return NewTag(repo, b[y+1:])
-	case "blob":
-		return NewBlob(repo, b[y+1:])
+	// case "commit":
+	// 	return NewCommit(repo, b[y+1:])
+	// case "tree":
+	// 	return NewTree(repo, b[y+1:])
+	// case "tag":
+	// 	return NewTag(repo, b[y+1:])
+	// case "blob":
+	// 	return NewBlob(repo, b[y+1:])
 	default:
 		return nil, fmt.Errorf("Unknown type %s for object %s", kind, sha)
 	}
@@ -62,7 +64,7 @@ type Commit struct {
 }
 
 func NewCommit(repo string, data []byte) *Commit {
-
+	return nil
 }
 
 type Blob struct {
@@ -70,7 +72,7 @@ type Blob struct {
 }
 
 func (b *Blob) Encode() []byte {
-
+	return nil
 }
 
 type entry struct {
@@ -103,4 +105,73 @@ func findRepo(path string) (string, error) {
 		return "", errors.New("no git dir")
 	}
 	return findRepo(filepath.Join(path, ".."))
+}
+
+type Repo struct {
+	worktree, gitDir string
+	conf             *ini.File
+}
+
+func newRepo(path string, create bool) (*Repo, error) {
+	r := &Repo{
+		worktree: path,
+		gitDir:   filepath.Join(path, ".git"),
+	}
+
+	if create {
+		var err error
+		mkdir := func(elem ...string) {
+			if err != nil {
+				return
+			}
+			err = os.MkdirAll(r.path(elem...), 0755)
+		}
+		mkdir()
+		mkdir("objects")
+		mkdir("refs", "tags")
+		mkdir("refs", "heads")
+		if err != nil {
+			return nil, err
+		}
+		if err := ioutil.WriteFile(r.path("description"), []byte("Unnamed repository; edit this file 'description' to name the repository.\n"), 0644); err != nil {
+			return nil, err
+		}
+		if err := ioutil.WriteFile(r.path("HEAD"), []byte("ref: refs/heads/master\n"), 0644); err != nil {
+			return nil, err
+		}
+		if err := defaultConfig().SaveTo(r.path("config")); err != nil {
+			return nil, err
+		}
+	}
+
+	if _, err := os.Stat(r.gitDir); err != nil {
+		return nil, err
+	}
+	cf := filepath.Join(r.gitDir, "config")
+	var err error
+	r.conf, err = ini.Load(cf)
+	if err != nil {
+		return nil, err
+	}
+	if vers := r.conf.Section("core").Key("repositoryformatversion").MustInt(); vers != 0 {
+		return nil, fmt.Errorf("Unsupported repositoryformatversion %d", vers)
+	}
+
+	return r, nil
+}
+
+func (r *Repo) path(elem ...string) string {
+	return filepath.Join(append([]string{r.gitDir}, elem...)...)
+}
+
+func defaultConfig() *ini.File {
+	f := ini.Empty()
+	s, err := f.NewSection("core")
+	if err != nil { // never happen
+		panic(err)
+	}
+	s.Key("repositoryformatversion").SetValue("0")
+	s.Key("filemode").SetValue("false")
+	s.Key("bare").SetValue("false")
+	return f
 }

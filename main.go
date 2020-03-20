@@ -3,15 +3,16 @@ package main
 // https://wyag.thb.lt/ in Golang
 
 import (
+	"context"
+	"flag"
 	"os"
 
 	"github.com/google/subcommands"
 )
 
 func main() {
-	subcommands.Init()
-	switch os.Args[1] {
-	case "init":
-		doInit(os.Args[2:])
-	}
+	subcommands.Register(subcommands.HelpCommand(), "")
+	subcommands.Register(&initCmd{}, "")
+	flag.Parse()
+	os.Exit(int(subcommands.Execute(context.Background())))
 }
