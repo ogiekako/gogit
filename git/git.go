@@ -168,10 +168,10 @@ func writeLog(w io.Writer, repo *Repo, sha string) error {
 	if err != nil {
 		return err
 	}
-	m, ok := o.Decode().(map[string][]string)
-	if !ok {
-		return fmt.Errorf("write log: %s", sha)
+	if o.Format != "commit" {
+		return fmt.Errorf("format %s != commit", o.Format)
 	}
+	m := o.Decode().(map[string][]string)
 	for _, p := range m["parent"] {
 		fmt.Fprintf(w, "c_%s -> c_%s\n", sha, p)
 		if err := writeLog(w, repo, p); err != nil {
