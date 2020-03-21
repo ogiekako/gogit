@@ -161,3 +161,21 @@ func TestLsTree(t *testing.T) {
 		t.Errorf("(-got +want)\n%s", diff)
 	}
 }
+func TestCheckout(t *testing.T) {
+	td, cancel := testData(t)
+	defer cancel()
+
+	testutil.Copy(t, filepath.Join(td.dir, ".git"), "testdata/gitdir2")
+
+	for _, sha := range []string{"7a7dd58919381869a1e39be3d0c7f45978a3a04f", "2823188337a27d8b30fa3b1876d1e46ef8f4ba57"} {
+		dir := "d_" + sha
+		run(td, "checkout", sha, dir)
+
+		if got := testutil.ReadFile(t, td.dir, dir, "a"); string(got) != "hoge\n" {
+			t.Errorf("%s != hoge", string(got))
+		}
+		if got := testutil.ReadFile(t, td.dir, dir, "d", "a"); string(got) != "" {
+			t.Errorf(`%q != ""`, got)
+		}
+	}
+}

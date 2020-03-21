@@ -284,8 +284,7 @@ func newTree(repo *Repo, data []byte) (*Object, error) {
 type Tree []*TreeLeaf
 
 type TreeLeaf struct {
-	Mode, Path []byte
-	SHA        string
+	Mode, Path, SHA string
 }
 
 func parseTree(raw []byte) (Tree, error) {
@@ -307,9 +306,9 @@ func parseTreeEntry(raw []byte, start int) (int, *TreeLeaf, error) {
 	if x-start != 5 && x-start != 6 {
 		return 0, nil, fmt.Errorf("illegal format")
 	}
-	mode := raw[start:x]
+	mode := string(raw[start:x])
 	y := bytes.IndexByte(raw[x:], '\x00') + x
-	path := raw[x+1 : y]
+	path := string(raw[x+1 : y])
 
 	v := big.NewInt(0)
 	sha := v.SetBytes(raw[y+1 : y+21]).Text(16)
