@@ -18,6 +18,7 @@ func main() {
 	subcommands.Register(&logCmd{}, "")
 	subcommands.Register(&lsTreeCmd{}, "")
 	subcommands.Register(&checkoutCmd{}, "")
+	subcommands.Register(&showRefCmd{}, "")
 	flag.Parse()
 	os.Exit(int(subcommands.Execute(context.Background())))
 }

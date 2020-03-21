@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"gopkg.in/ini.v1"
 )
@@ -313,4 +314,35 @@ func parseTreeEntry(raw []byte, start int) (int, *TreeLeaf, error) {
 	v := big.NewInt(0)
 	sha := v.SetBytes(raw[y+1 : y+21]).Text(16)
 	return y + 21, &TreeLeaf{mode, path, sha}, nil
+}
+
+func resolveRef(repo *Repo, path string) (string, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	s := string(b)
+	if strings.HasPrefix(s, "ref: ") {
+		p := s[len("ref: ") : len(s)-1]
+		return resolveRef(repo, repo.path(p))
+	}
+	return s[:len(s)-1], nil
+}
+
+func Refs(r *Repo) (map[string]string, error) {
+	m := make(map[string]string)
+	return m, filepath.Walk(r.path("refs"), func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		sha, err := resolveRef(r, path)
+		if err != nil {
+			return err
+		}
+		m[path] = sha
+		return nil
+	})
 }

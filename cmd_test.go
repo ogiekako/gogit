@@ -179,3 +179,19 @@ func TestCheckout(t *testing.T) {
 		}
 	}
 }
+
+func TestShowRef(t *testing.T) {
+	td, cancel := testData(t)
+	defer cancel()
+
+	testutil.Copy(t, filepath.Join(td.dir, ".git"), "testdata/gitdir2")
+
+	got := run(td, "show-ref")
+	want := `6aba443f3b8da367cafd04b17c0d33acbdec8475 refs/heads/c
+8c93c7625fe3d44432383432565e2fc31090833d refs/heads/hoge
+7a7dd58919381869a1e39be3d0c7f45978a3a04f refs/heads/master
+`
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("(-got +want)\n%s", diff)
+	}
+}
