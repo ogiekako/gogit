@@ -12,8 +12,8 @@ func TestDefaultConfig(t *testing.T) {
 	got := b.String()
 	want := `[core]
 	repositoryformatversion = 0
-	filemode                = false
-	bare                    = false
+	filemode = false
+	bare = false
 
 `
 	if diff := cmp.Diff(got, want); diff != "" {

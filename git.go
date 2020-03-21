@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"compress/zlib"
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -13,14 +15,23 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-// Object represents a git object.
-type Object interface {
-	// Encode encodes itself to bytes
-	Encode() []byte
+func init() {
+	ini.PrettyFormat = false
+	ini.PrettyEqual = true
 }
 
-func NewObject(repo, sha string) (Object, error) {
-	path := filepath.Join(repo, "objects", sha[0:2], sha[2:])
+// Object represents a git object.
+type Object struct {
+	// format is blob, commit, tag or tree.
+	format string
+	repo   *Repo
+
+	// encode encodes itself to bytes.
+	encode func() []byte
+}
+
+func ReadObject(repo *Repo, sha string) (*Object, error) {
+	path := repo.path("objects", sha[0:2], sha[2:])
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -39,7 +50,7 @@ func NewObject(repo, sha string) (Object, error) {
 	kind := string(b[0:x])
 
 	y := bytes.IndexByte(b[x:], '\x00') + x
-	size, err := strconv.Atoi(string(b[x:y]))
+	size, err := strconv.Atoi(string(b[x+1 : y]))
 	if err != nil {
 		return nil, err
 	}
@@ -53,10 +64,58 @@ func NewObject(repo, sha string) (Object, error) {
 	// 	return NewTree(repo, b[y+1:])
 	// case "tag":
 	// 	return NewTag(repo, b[y+1:])
-	// case "blob":
-	// 	return NewBlob(repo, b[y+1:])
+	case "blob":
+		return NewBlob(repo, b[y+1:]), nil
 	default:
 		return nil, fmt.Errorf("Unknown type %s for object %s", kind, sha)
+	}
+}
+
+// ObjectHash computes object hash from the data, if repo is not nil stores the object into repo.
+func ObjectHash(data []byte, fmt string, repo *Repo) (string, error) {
+	var o *Object
+	switch fmt {
+	case "blob":
+		o = NewBlob(repo, data)
+	default:
+	}
+	return o.HashData()
+}
+
+// HashData computes sha1 hash of the object.
+// Stores object if o.repo is non-nil.
+func (o *Object) HashData() (string, error) {
+	data := o.encode()
+	hash := sha1.New()
+	result := fmt.Sprintf("%s %d\x00%s", o.format, len(data), data)
+	fmt.Fprint(hash, result)
+	sha := hex.EncodeToString(hash.Sum(nil))
+
+	if o.repo != nil {
+		p := o.repo.path("objects", sha[0:2], sha[2:])
+		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+			return "", err
+		}
+		f, err := os.Create(p)
+		if err != nil {
+			return "", err
+		}
+		w := zlib.NewWriter(f)
+		defer w.Close()
+		if _, err := w.Write([]byte(result)); err != nil {
+			return "", err
+		}
+	}
+	return sha, nil
+}
+
+func NewBlob(repo *Repo, data []byte) *Object {
+	return &Object{
+		format: "blob",
+		repo:   repo,
+		encode: func() []byte {
+			return data
+		},
 	}
 }
 
