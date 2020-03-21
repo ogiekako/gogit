@@ -179,44 +179,6 @@ func writeLog(w io.Writer, repo *Repo, sha string) error {
 	return nil
 }
 
-func (o *Object) parents() ([]*Object, error) {
-	if o.format != "commit" {
-		return nil, fmt.Errorf("format %s != commit", o.format)
-	}
-	m := o.decode().(map[string]string)
-	if _, ok := m["parent"]; !ok {
-		return nil, nil
-	}
-	// FIXME
-	return nil, nil
-}
-
-type Blob struct {
-	data []byte
-}
-
-func (b *Blob) Encode() []byte {
-	return nil
-}
-
-type entry struct {
-	filename string
-}
-
-type Tree struct {
-	es []entry
-}
-
-type blob []byte
-type tree []entry
-
-// type commit ()
-
-// object
-// - blob: only file contents.
-// - tree: a directory contents: list of (filemode, filename, object hash)
-// - commit: commit object (tree hash, parent hash + commit info)
-
 func findRepo(path string) (string, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {
