@@ -146,3 +146,18 @@ c_8c93c7625fe3d44432383432565e2fc31090833d -> c_f6cd3846af74cdaf49efe8874e0ecdf6
 		t.Errorf("(-got +want)\n%s", diff)
 	}
 }
+func TestLsTree(t *testing.T) {
+	td, cancel := testData(t)
+	defer cancel()
+
+	testutil.Copy(t, filepath.Join(td.dir, ".git"), "testdata/gitdir")
+
+	got := run(td, "ls-tree", "32179141295ce1e34105ed7619916254cbe00e6a")
+	want := `100644 blob 2262de0c121f22df8e78f5a37d6e114fd322c0b0	a
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	b
+100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	c
+`
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("(-got +want)\n%s", diff)
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,13 +24,14 @@ func init() {
 
 // Object represents a git object.
 type Object struct {
-	// format is blob, commit, tag or tree.
-	format string
+	// Format is blob, commit, tag or tree.
+	Format string
 	repo   *Repo
 
 	// Encode encodes itself to bytes.
 	Encode func() []byte
-	decode func() interface{}
+	// Decode decodes object into format specific representation.
+	Decode func() interface{}
 }
 
 func ReadObject(repo *Repo, sha string) (*Object, error) {
@@ -62,8 +64,8 @@ func ReadObject(repo *Repo, sha string) (*Object, error) {
 	switch kind {
 	case "commit":
 		return newCommit(repo, b[y+1:])
-	// case "tree":
-	// 	return NewTree(repo, b[y+1:])
+	case "tree":
+		return newTree(repo, b[y+1:])
 	// case "tag":
 	// 	return NewTag(repo, b[y+1:])
 	case "blob":
@@ -90,7 +92,7 @@ func ObjectHash(data []byte, fmt string, repo *Repo) (string, error) {
 func (o *Object) HashData(write bool) (string, error) {
 	data := o.Encode()
 	hash := sha1.New()
-	result := fmt.Sprintf("%s %d\x00%s", o.format, len(data), data)
+	result := fmt.Sprintf("%s %d\x00%s", o.Format, len(data), data)
 	fmt.Fprint(hash, result)
 	sha := hex.EncodeToString(hash.Sum(nil))
 
@@ -115,12 +117,12 @@ func (o *Object) HashData(write bool) (string, error) {
 // newBlob creates a blob object from the object file data.
 func newBlob(repo *Repo, data []byte) *Object {
 	return &Object{
-		format: "blob",
+		Format: "blob",
 		repo:   repo,
 		Encode: func() []byte {
 			return data
 		},
-		decode: func() interface{} {
+		Decode: func() interface{} {
 			return data
 		},
 	}
@@ -133,12 +135,12 @@ func newCommit(repo *Repo, data []byte) (*Object, error) {
 		return nil, err
 	}
 	return &Object{
-		format: "commit",
+		Format: "commit",
 		repo:   repo,
 		Encode: func() []byte {
 			return data
 		},
-		decode: func() interface{} {
+		Decode: func() interface{} {
 			return kvlm
 		},
 	}, nil
@@ -166,7 +168,7 @@ func writeLog(w io.Writer, repo *Repo, sha string) error {
 	if err != nil {
 		return err
 	}
-	m, ok := o.decode().(map[string][]string)
+	m, ok := o.Decode().(map[string][]string)
 	if !ok {
 		return fmt.Errorf("write log: %s", sha)
 	}
@@ -260,4 +262,56 @@ func defaultConfig() *ini.File {
 	s.Key("filemode").SetValue("false")
 	s.Key("bare").SetValue("false")
 	return f
+}
+
+func newTree(repo *Repo, data []byte) (*Object, error) {
+	t, err := parseTree(data)
+	if err != nil {
+		return nil, err
+	}
+	return &Object{
+		Format: "tree",
+		repo:   repo,
+		Encode: func() []byte {
+			return data
+		},
+		Decode: func() interface{} {
+			return t
+		},
+	}, nil
+}
+
+type Tree []*TreeLeaf
+
+type TreeLeaf struct {
+	Mode, Path []byte
+	SHA        string
+}
+
+func parseTree(raw []byte) (Tree, error) {
+	pos := 0
+	var res []*TreeLeaf
+	for pos < len(raw) {
+		nPos, l, err := parseTreeEntry(raw, pos)
+		if err != nil {
+			return nil, err
+		}
+		pos = nPos
+		res = append(res, l)
+	}
+	return Tree(res), nil
+}
+
+func parseTreeEntry(raw []byte, start int) (int, *TreeLeaf, error) {
+	x := bytes.IndexByte(raw[start:], ' ') + start
+	if x-start != 5 && x-start != 6 {
+		return 0, nil, fmt.Errorf("illegal format")
+	}
+	mode := raw[start:x]
+	y := bytes.IndexByte(raw[x:], '\x00') + x
+	path := raw[x+1 : y]
+
+	v := big.NewInt(0)
+	sha := v.SetBytes(raw[y+1 : y+21]).Text(16)
+	return y + 21, &TreeLeaf{mode, path, sha}, nil
 }

@@ -16,6 +16,7 @@ func main() {
 	subcommands.Register(&catFileCmd{}, "")
 	subcommands.Register(&hashObjectCmd{}, "")
 	subcommands.Register(&logCmd{}, "")
+	subcommands.Register(&lsTreeCmd{}, "")
 	flag.Parse()
 	os.Exit(int(subcommands.Execute(context.Background())))
 }
