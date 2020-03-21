@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
+	"github.com/ogiekako/gogit/git"
 )
 
 type catFileCmd struct{}
@@ -28,14 +29,14 @@ func (c *catFileCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 }
 
 func catFile(typ, sha string) error {
-	r, err := newRepo("", false)
+	r, err := git.NewRepo("", false)
 	if err != nil {
 		return err
 	}
-	o, err := ReadObject(r, sha)
+	o, err := git.ReadObject(r, sha)
 	if err != nil {
 		return err
 	}
-	fmt.Print(string(o.encode()))
+	fmt.Print(string(o.Encode()))
 	return nil
 }

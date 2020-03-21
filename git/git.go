@@ -1,4 +1,4 @@
-package main
+package git
 
 import (
 	"bytes"
@@ -26,8 +26,8 @@ type Object struct {
 	format string
 	repo   *Repo
 
-	// encode encodes itself to bytes.
-	encode func() []byte
+	// Encode encodes itself to bytes.
+	Encode func() []byte
 }
 
 func ReadObject(repo *Repo, sha string) (*Object, error) {
@@ -85,7 +85,7 @@ func ObjectHash(data []byte, fmt string, repo *Repo) (string, error) {
 // HashData computes sha1 hash of the object.
 // Stores object if o.repo is non-nil.
 func (o *Object) HashData() (string, error) {
-	data := o.encode()
+	data := o.Encode()
 	hash := sha1.New()
 	result := fmt.Sprintf("%s %d\x00%s", o.format, len(data), data)
 	fmt.Fprint(hash, result)
@@ -113,7 +113,7 @@ func NewBlob(repo *Repo, data []byte) *Object {
 	return &Object{
 		format: "blob",
 		repo:   repo,
-		encode: func() []byte {
+		Encode: func() []byte {
 			return data
 		},
 	}
@@ -171,7 +171,7 @@ type Repo struct {
 	conf             *ini.File
 }
 
-func newRepo(path string, create bool) (*Repo, error) {
+func NewRepo(path string, create bool) (*Repo, error) {
 	r := &Repo{
 		worktree: path,
 		gitDir:   filepath.Join(path, ".git"),

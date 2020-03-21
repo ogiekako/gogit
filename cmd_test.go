@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ogiekako/test/git/testutil"
+	"github.com/ogiekako/gogit/testutil"
 )
 
 var gitdir = func() string {

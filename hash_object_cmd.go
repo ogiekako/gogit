@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
+	"github.com/ogiekako/gogit/git"
 )
 
 type hashObjectCmd struct {
@@ -35,10 +36,10 @@ func (c *hashObjectCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...inter
 }
 
 func hashObject(path, typ string, write bool) error {
-	var r *Repo
+	var r *git.Repo
 	if write {
 		var err error
-		r, err = newRepo("", false)
+		r, err = git.NewRepo("", false)
 		if err != nil {
 			return err
 		}
@@ -47,7 +48,7 @@ func hashObject(path, typ string, write bool) error {
 	if err != nil {
 		return err
 	}
-	sha, err := ObjectHash(b, typ, r)
+	sha, err := git.ObjectHash(b, typ, r)
 	if err != nil {
 		return err
 	}
