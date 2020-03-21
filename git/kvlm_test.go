@@ -6,8 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestParseLVLM(t *testing.T) {
-	const data = `tree 29ff16c9c14e2652b22f8b78bb08a5a07930c147
+const raw = `tree 29ff16c9c14e2652b22f8b78bb08a5a07930c147
 parent 206941306e8a8af65b66eaaaea388a7ae24d49a0
 author Thibault Polge <thibault@thb.lt> 1527025023 +0200
 committer Thibault Polge <thibault@thb.lt> 1527025044 +0200
@@ -30,12 +29,12 @@ gpgsig -----BEGIN PGP SIGNATURE-----
 
 Create first draft`
 
-	want := map[string]string {
-		"tree": "29ff16c9c14e2652b22f8b78bb08a5a07930c147",
-		"parent": "206941306e8a8af65b66eaaaea388a7ae24d49a0",
-		"author": "Thibault Polge <thibault@thb.lt> 1527025023 +0200",
-		"committer": "Thibault Polge <thibault@thb.lt> 1527025044 +0200",
-		"gpgsig": `-----BEGIN PGP SIGNATURE-----
+var m = map[string][]string{
+	"tree":      {"29ff16c9c14e2652b22f8b78bb08a5a07930c147"},
+	"parent":    {"206941306e8a8af65b66eaaaea388a7ae24d49a0"},
+	"author":    {"Thibault Polge <thibault@thb.lt> 1527025023 +0200"},
+	"committer": {"Thibault Polge <thibault@thb.lt> 1527025044 +0200"},
+	"gpgsig": {`-----BEGIN PGP SIGNATURE-----
 
 iQIzBAABCAAdFiEExwXquOM8bWb4Q2zVGxM2FxoLkGQFAlsEjZQACgkQGxM2FxoL
 kGQdcBAAqPP+ln4nGDd2gETXjvOpOxLzIMEw4A9gU6CzWzm+oB8mEIKyaH0UFIPh
@@ -50,15 +49,32 @@ WBhRhipCCgZhkj9g2NEk7jRVslti1NdN5zoQLaJNqSwO1MtxTmJ15Ksk3QP6kfLB
 Q52UWybBzpaP9HEd4XnR+HuQ4k2K0ns2KgNImsNvIyFwbpMUyUWLMPimaV1DWUXo
 5SBjDB/V/W2JBFR+XKHFJeFwYhj7DD/ocsGr4ZMx/lgc8rjIBkI=
 =lgTX
------END PGP SIGNATURE-----`,
-		"": "Create first draft",
-	}
+-----END PGP SIGNATURE-----`},
+	"": {"Create first draft"},
+}
 
-	got, err := parseKVLM(data)
+func TestDecodeLVLM(t *testing.T) {
+	got, err := decodeKVLM(raw)
 	if err != nil {
 		t.Error(err)
 	}
-	if diff := cmp.Diff(got, want); diff != "" {
-        t.Errorf("(-got +want)\n%s", diff)
+	if diff := cmp.Diff(got, m); diff != "" {
+		t.Errorf("(-got +want)\n%s", diff)
+	}
+
+	_, err = decodeKVLM("tree c76659e1741b17f66043d41bab6a1619a0b7e4a0\nauthor Keigo Oka <ogiekako@gmail.com> 1584773498 +0900\ncommitter Keigo Oka <ogiekako@gmail.com> 1584773498 +0900\n\nhoge\n")
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestEncodeLVLM(t *testing.T) {
+	got := encodeKVLM(m)
+	gotM, err := decodeKVLM(got)
+	if err != nil {
+		t.Error(err)
+	}
+	if diff := cmp.Diff(gotM, m); diff != "" {
+		t.Errorf("(-got +want)\n%s", diff)
 	}
 }

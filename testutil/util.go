@@ -3,6 +3,7 @@ package testutil
 import (
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -23,5 +24,12 @@ func WriteFile(t *testing.T, b []byte, elem ...string) {
 	}
 	if err := ioutil.WriteFile(p, b, 0644); err != nil {
 		t.Error(err)
+	}
+}
+
+// Copy copies src to dst, recursively if src is a directory.
+func Copy(t *testing.T, dst, src string) {
+	if b, err := exec.Command("cp", "-r", src, dst).CombinedOutput(); err != nil {
+		t.Fatalf("%s: %v", string(b), err)
 	}
 }

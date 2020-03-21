@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ type Object struct {
 
 	// Encode encodes itself to bytes.
 	Encode func() []byte
+	decode func() interface{}
 }
 
 func ReadObject(repo *Repo, sha string) (*Object, error) {
@@ -58,14 +60,14 @@ func ReadObject(repo *Repo, sha string) (*Object, error) {
 		return nil, fmt.Errorf("Malformed object %s: bad length", sha)
 	}
 	switch kind {
-	// case "commit":
-	// 	return NewCommit(repo, b[y+1:])
+	case "commit":
+		return newCommit(repo, b[y+1:])
 	// case "tree":
 	// 	return NewTree(repo, b[y+1:])
 	// case "tag":
 	// 	return NewTag(repo, b[y+1:])
 	case "blob":
-		return NewBlob(repo, b[y+1:]), nil
+		return newBlob(repo, b[y+1:]), nil
 	default:
 		return nil, fmt.Errorf("Unknown type %s for object %s", kind, sha)
 	}
@@ -76,22 +78,23 @@ func ObjectHash(data []byte, fmt string, repo *Repo) (string, error) {
 	var o *Object
 	switch fmt {
 	case "blob":
-		o = NewBlob(repo, data)
+		o = newBlob(repo, data)
 	default:
 	}
-	return o.HashData()
+	return o.HashData(repo != nil)
 }
 
 // HashData computes sha1 hash of the object.
-// Stores object if o.repo is non-nil.
-func (o *Object) HashData() (string, error) {
+// Stores object if write is true.
+// If always succeeds if write is false.
+func (o *Object) HashData(write bool) (string, error) {
 	data := o.Encode()
 	hash := sha1.New()
 	result := fmt.Sprintf("%s %d\x00%s", o.format, len(data), data)
 	fmt.Fprint(hash, result)
 	sha := hex.EncodeToString(hash.Sum(nil))
 
-	if o.repo != nil {
+	if write {
 		p := o.repo.path("objects", sha[0:2], sha[2:])
 		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
 			return "", err
@@ -109,21 +112,83 @@ func (o *Object) HashData() (string, error) {
 	return sha, nil
 }
 
-func NewBlob(repo *Repo, data []byte) *Object {
+// newBlob creates a blob object from the object file data.
+func newBlob(repo *Repo, data []byte) *Object {
 	return &Object{
 		format: "blob",
 		repo:   repo,
 		Encode: func() []byte {
 			return data
 		},
+		decode: func() interface{} {
+			return data
+		},
 	}
 }
 
-type Commit struct {
+// newCommit creates a commit object from the object file data.
+func newCommit(repo *Repo, data []byte) (*Object, error) {
+	kvlm, err := decodeKVLM(string(data))
+	if err != nil {
+		return nil, err
+	}
+	return &Object{
+		format: "commit",
+		repo:   repo,
+		Encode: func() []byte {
+			return data
+		},
+		decode: func() interface{} {
+			return kvlm
+		},
+	}, nil
 }
 
-func NewCommit(repo string, data []byte) *Commit {
+// WriteLog writes log to w in graphvis format.
+func WriteLog(w io.Writer, repo *Repo, sha string) error {
+	if repo == nil {
+		return errors.New("repo is nil")
+	}
+	if _, err := fmt.Fprintln(w, "digraph wyaglog{"); err != nil {
+		return err
+	}
+	if err := writeLog(w, repo, sha); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintln(w, "}"); err != nil {
+		return err
+	}
 	return nil
+}
+
+func writeLog(w io.Writer, repo *Repo, sha string) error {
+	o, err := ReadObject(repo, sha)
+	if err != nil {
+		return err
+	}
+	m, ok := o.decode().(map[string][]string)
+	if !ok {
+		return fmt.Errorf("write log: %s", sha)
+	}
+	for _, p := range m["parent"] {
+		fmt.Fprintf(w, "c_%s -> c_%s\n", sha, p)
+		if err := writeLog(w, repo, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *Object) parents() ([]*Object, error) {
+	if o.format != "commit" {
+		return nil, fmt.Errorf("format %s != commit", o.format)
+	}
+	m := o.decode().(map[string]string)
+	if _, ok := m["parent"]; !ok {
+		return nil, nil
+	}
+	// FIXME
+	return nil, nil
 }
 
 type Blob struct {

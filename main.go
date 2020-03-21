@@ -15,6 +15,7 @@ func main() {
 	subcommands.Register(&initCmd{}, "")
 	subcommands.Register(&catFileCmd{}, "")
 	subcommands.Register(&hashObjectCmd{}, "")
+	subcommands.Register(&logCmd{}, "")
 	flag.Parse()
 	os.Exit(int(subcommands.Execute(context.Background())))
 }

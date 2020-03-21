@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/ogiekako/gogit/testutil"
 )
 
@@ -125,5 +126,23 @@ func TestHashObject(t *testing.T) {
 	run(td, "hash-object", "-w", "a")
 	if _, err := os.Stat(objPath); err != nil {
 		t.Errorf("%s not exists: %v", objPath, err)
+	}
+}
+func TestLog(t *testing.T) {
+	td, cancel := testData(t)
+	defer cancel()
+
+	testutil.Copy(t, filepath.Join(td.dir, ".git"), "testdata/gitdir")
+
+	got := run(td, "log", "0a380ee19ff3c304bd4c6bd8d0000d4c1070b3d3")
+	want := `digraph wyaglog{
+c_0a380ee19ff3c304bd4c6bd8d0000d4c1070b3d3 -> c_6aba443f3b8da367cafd04b17c0d33acbdec8475
+c_6aba443f3b8da367cafd04b17c0d33acbdec8475 -> c_f6cd3846af74cdaf49efe8874e0ecdf6b8c56327
+c_0a380ee19ff3c304bd4c6bd8d0000d4c1070b3d3 -> c_8c93c7625fe3d44432383432565e2fc31090833d
+c_8c93c7625fe3d44432383432565e2fc31090833d -> c_f6cd3846af74cdaf49efe8874e0ecdf6b8c56327
+}
+`
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("(-got +want)\n%s", diff)
 	}
 }
