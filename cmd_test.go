@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -129,7 +130,12 @@ func TestHashObject(t *testing.T) {
 	}
 
 	testutil.Copy(t, filepath.Join(td.dir, "a.tag"), "testdata/a.tag")
-	if got, want := run(td, "hash-object", "-t", "tag", "a.tag"), "6521f7bf9c42c397be87988657092931e32ca56f\n"; got != want {
+	b, err := exec.Command("git", "hash-object", "-t", "tag", filepath.Join(td.dir, "a.tag")).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := string(b)
+	if got := run(td, "hash-object", "-t", "tag", "a.tag"); got != want {
 		t.Errorf("got %s; want %s", got, want)
 	}
 }
@@ -195,6 +201,50 @@ func TestShowRef(t *testing.T) {
 	want := `6aba443f3b8da367cafd04b17c0d33acbdec8475 refs/heads/c
 8c93c7625fe3d44432383432565e2fc31090833d refs/heads/hoge
 7a7dd58919381869a1e39be3d0c7f45978a3a04f refs/heads/master
+`
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("(-got +want)\n%s", diff)
+	}
+}
+
+func TestTag(t *testing.T) {
+	td, cancel := testData(t)
+	defer cancel()
+
+	testutil.Copy(t, filepath.Join(td.dir, ".git"), "testdata/gitdir2")
+
+	const head = "7a7dd58919381869a1e39be3d0c7f45978a3a04f"
+
+	run(td, "tag", "hoge", head)
+
+	got := run(td, "show-ref")
+	want := `6aba443f3b8da367cafd04b17c0d33acbdec8475 refs/heads/c
+8c93c7625fe3d44432383432565e2fc31090833d refs/heads/hoge
+7a7dd58919381869a1e39be3d0c7f45978a3a04f refs/heads/master
+7a7dd58919381869a1e39be3d0c7f45978a3a04f refs/tags/hoge
+`
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Errorf("(-got +want)\n%s", diff)
+	}
+
+	run(td, "tag", "-a", "piyo", head)
+	s := run(td, "show-ref")
+	var sha string
+	for _, l := range strings.Split(s, "\n") {
+		if strings.HasSuffix(l, "piyo") {
+			sha = strings.Split(l, " ")[0]
+		}
+	}
+	if sha == "" {
+		t.Fatalf("tag piyo not found\n%s", s)
+	}
+	got = run(td, "cat-file", "tag", sha)
+	want = `tag piyo
+tagger dummy name <dummy@example.com>
+object 7a7dd58919381869a1e39be3d0c7f45978a3a04f
+type commit
+
+Dummy commit message.
 `
 	if diff := cmp.Diff(got, want); diff != "" {
 		t.Errorf("(-got +want)\n%s", diff)

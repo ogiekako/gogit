@@ -1,4 +1,4 @@
-package git
+package kvlm
 
 import (
 	"testing"
@@ -29,12 +29,13 @@ gpgsig -----BEGIN PGP SIGNATURE-----
 
 Create first draft`
 
-var m = map[string][]string{
-	"tree":      {"29ff16c9c14e2652b22f8b78bb08a5a07930c147"},
-	"parent":    {"206941306e8a8af65b66eaaaea388a7ae24d49a0"},
-	"author":    {"Thibault Polge <thibault@thb.lt> 1527025023 +0200"},
-	"committer": {"Thibault Polge <thibault@thb.lt> 1527025044 +0200"},
-	"gpgsig": {`-----BEGIN PGP SIGNATURE-----
+func kvlm() *KVLM {
+	kv := New()
+	kv.Append("tree", "29ff16c9c14e2652b22f8b78bb08a5a07930c147")
+	kv.Append("parent", "206941306e8a8af65b66eaaaea388a7ae24d49a0")
+	kv.Append("author", "Thibault Polge <thibault@thb.lt> 1527025023 +0200")
+	kv.Append("committer", "Thibault Polge <thibault@thb.lt> 1527025044 +0200")
+	kv.Append("gpgsig", `-----BEGIN PGP SIGNATURE-----
 
 iQIzBAABCAAdFiEExwXquOM8bWb4Q2zVGxM2FxoLkGQFAlsEjZQACgkQGxM2FxoL
 kGQdcBAAqPP+ln4nGDd2gETXjvOpOxLzIMEw4A9gU6CzWzm+oB8mEIKyaH0UFIPh
@@ -49,32 +50,30 @@ WBhRhipCCgZhkj9g2NEk7jRVslti1NdN5zoQLaJNqSwO1MtxTmJ15Ksk3QP6kfLB
 Q52UWybBzpaP9HEd4XnR+HuQ4k2K0ns2KgNImsNvIyFwbpMUyUWLMPimaV1DWUXo
 5SBjDB/V/W2JBFR+XKHFJeFwYhj7DD/ocsGr4ZMx/lgc8rjIBkI=
 =lgTX
------END PGP SIGNATURE-----`},
-	"": {"Create first draft"},
-}
-
-func TestDecodeLVLM(t *testing.T) {
-	got, err := decodeKVLM(raw)
-	if err != nil {
-		t.Error(err)
-	}
-	if diff := cmp.Diff(got, m); diff != "" {
-		t.Errorf("(-got +want)\n%s", diff)
-	}
-
-	_, err = decodeKVLM("tree c76659e1741b17f66043d41bab6a1619a0b7e4a0\nauthor Keigo Oka <ogiekako@gmail.com> 1584773498 +0900\ncommitter Keigo Oka <ogiekako@gmail.com> 1584773498 +0900\n\nhoge\n")
-	if err != nil {
-		t.Error(err)
-	}
+-----END PGP SIGNATURE-----`)
+	kv.Append("", "Create first draft")
+	return kv
 }
 
 func TestEncodeLVLM(t *testing.T) {
-	got := encodeKVLM(m)
-	gotM, err := decodeKVLM(got)
+	got := Encode(kvlm())
+	if diff := cmp.Diff(got, raw); diff != "" {
+		t.Errorf("(-got +want)\n%s", diff)
+	}
+}
+
+func TestDecodeLVLM(t *testing.T) {
+	gotKV, err := Decode(raw)
 	if err != nil {
 		t.Error(err)
 	}
-	if diff := cmp.Diff(gotM, m); diff != "" {
+	got := Encode(gotKV)
+	if diff := cmp.Diff(got, raw); diff != "" {
 		t.Errorf("(-got +want)\n%s", diff)
+	}
+
+	_, err = Decode("tree c76659e1741b17f66043d41bab6a1619a0b7e4a0\nauthor Keigo Oka <ogiekako@gmail.com> 1584773498 +0900\ncommitter Keigo Oka <ogiekako@gmail.com> 1584773498 +0900\n\nhoge\n")
+	if err != nil {
+		t.Error(err)
 	}
 }

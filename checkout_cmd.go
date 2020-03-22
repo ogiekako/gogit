@@ -59,7 +59,7 @@ func checkout(sha, path string) error {
 	}
 	if o.Type == "commit" {
 		m := o.KVLM
-		o, err = git.ReadObject(r, m["tree"][0])
+		o, err = git.ReadObject(r, m.Get("tree")[0])
 		if err != nil {
 			return err
 		}

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ogiekako/gogit/kvlm"
 	"gopkg.in/ini.v1"
 )
 
@@ -30,7 +31,7 @@ type Object struct {
 	repo *Repo
 
 	Blob []byte
-	KVLM map[string][]string
+	KVLM *kvlm.KVLM
 	Tree Tree
 
 	// Encode encodes itself to bytes.
@@ -154,12 +155,13 @@ func newTag(repo *Repo) *Object {
 	o := &Object{
 		Type: "tag",
 		repo: repo,
+		KVLM: kvlm.New(),
 	}
 	o.Encode = func() []byte {
-		return []byte(encodeKVLM(o.KVLM))
+		return []byte(kvlm.Encode(o.KVLM))
 	}
 	o.Decode = func(data []byte) (*Object, error) {
-		kvlm, err := decodeKVLM(string(data))
+		kvlm, err := kvlm.Decode(string(data))
 		o.KVLM = kvlm
 		return o, err
 	}
@@ -173,10 +175,10 @@ func newCommit(repo *Repo) *Object {
 		repo: repo,
 	}
 	o.Encode = func() []byte {
-		return []byte(encodeKVLM(o.KVLM))
+		return []byte(kvlm.Encode(o.KVLM))
 	}
 	o.Decode = func(data []byte) (*Object, error) {
-		kvlm, err := decodeKVLM(string(data))
+		kvlm, err := kvlm.Decode(string(data))
 		o.KVLM = kvlm
 		return o, err
 	}
@@ -209,7 +211,7 @@ func writeLog(w io.Writer, repo *Repo, sha string) error {
 		return fmt.Errorf("type %s != commit", o.Type)
 	}
 	m := o.KVLM
-	for _, p := range m["parent"] {
+	for _, p := range m.Get("parent") {
 		fmt.Fprintf(w, "c_%s -> c_%s\n", sha, p)
 		if err := writeLog(w, repo, p); err != nil {
 			return err
@@ -384,4 +386,32 @@ func Refs(r *Repo) (map[string]string, error) {
 		m[path] = sha
 		return nil
 	})
+}
+
+func createRef(r *Repo, refPath, sha string) error {
+	return writeFile([]byte(sha+"\n"), r.path("refs", refPath))
+}
+
+func Tag(r *Repo, name, sha string, object bool) error {
+	refPath := filepath.Join("tags", name)
+	if !object {
+		return createRef(r, refPath, sha)
+	}
+	to, err := ReadObject(r, sha)
+	if err != nil {
+		return err
+	}
+
+	o := newTag(r)
+	o.KVLM.Append("tag", name)
+	o.KVLM.Append("tagger", "dummy name <dummy@example.com>")
+	o.KVLM.Append("object", sha)
+	o.KVLM.Append("type", to.Type)
+	o.KVLM.Append("", "Dummy commit message.\n")
+
+	tagSHA, err := o.HashData(true)
+	if err != nil {
+		return err
+	}
+	return createRef(r, refPath, tagSHA)
 }
