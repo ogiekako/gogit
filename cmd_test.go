@@ -130,12 +130,7 @@ func TestHashObject(t *testing.T) {
 	}
 
 	testutil.Copy(t, filepath.Join(td.dir, "a.tag"), "testdata/a.tag")
-	b, err := exec.Command("git", "hash-object", "-t", "tag", filepath.Join(td.dir, "a.tag")).Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := string(b)
-	if got := run(td, "hash-object", "-t", "tag", "a.tag"); got != want {
+	if got, want := run(td, "hash-object", "-t", "tag", "a.tag"), "6521f7bf9c42c397be87988657092931e32ca56f\n"; got != want {
 		t.Errorf("got %s; want %s", got, want)
 	}
 }
