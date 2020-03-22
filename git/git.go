@@ -87,7 +87,7 @@ func FindObject(repo *Repo, name, typ string) (*Object, error) {
 		case "commit":
 			sha = o.KVLM.Get("tree")[0]
 		default:
-			return nil, fmt.Errorf("found no object for %s", sha)
+			return nil, fmt.Errorf("found no object of type %s for %s", typ, name)
 		}
 	}
 }
@@ -126,6 +126,7 @@ func findSHA(repo *Repo, name string) ([]string, error) {
 	return res, nil
 }
 
+// ReadObject reads object for the hash.
 func ReadObject(repo *Repo, sha string) (*Object, error) {
 	path := repo.path("objects", sha[0:2], sha[2:])
 
@@ -317,11 +318,13 @@ func findRepo(path string) (string, error) {
 	return findRepo(filepath.Join(path, ".."))
 }
 
+// Repo represents a git repository.
 type Repo struct {
 	worktree, gitDir string
 	conf             *ini.File
 }
 
+// NewRepo reads or creates a repository.
 func NewRepo(path string, create bool) (*Repo, error) {
 	r := &Repo{
 		worktree: path,
@@ -406,8 +409,10 @@ func newTree(repo *Repo) *Object {
 	return o
 }
 
+// Tree is a representation of a tree object.
 type Tree []*TreeLeaf
 
+// TreeLeaf is an entry of Tree
 type TreeLeaf struct {
 	Mode, Path, SHA string
 }
@@ -472,6 +477,7 @@ func resolveRef(repo *Repo, path string) (string, error) {
 	return s[:len(s)-1], nil
 }
 
+// Refs returns mapping from files in refs directory to its hash.
 func Refs(r *Repo) (map[string]string, error) {
 	m := make(map[string]string)
 	return m, filepath.Walk(r.path("refs"), func(path string, info os.FileInfo, err error) error {
@@ -494,6 +500,7 @@ func createRef(r *Repo, refPath, sha string) error {
 	return writeFile([]byte(sha+"\n"), r.path("refs", refPath))
 }
 
+// Tag creates a new tag object.
 func Tag(r *Repo, name, sha string, object bool) error {
 	refPath := filepath.Join("tags", name)
 	if !object {
