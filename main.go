@@ -8,19 +8,12 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
+	_ "github.com/ogiekako/gogit/cmd" // register commands
 )
 
 func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
-	subcommands.Register(&initCmd{}, "")
-	subcommands.Register(&catFileCmd{}, "")
-	subcommands.Register(&hashObjectCmd{}, "")
-	subcommands.Register(&logCmd{}, "")
-	subcommands.Register(&lsTreeCmd{}, "")
-	subcommands.Register(&checkoutCmd{}, "")
-	subcommands.Register(&showRefCmd{}, "")
-	subcommands.Register(&tagCmd{}, "")
-	subcommands.Register(&revParseCmd{}, "")
+	// TODO: implement ls-files command, parsing index file.
 	flag.Parse()
 	os.Exit(int(subcommands.Execute(context.Background())))
 }

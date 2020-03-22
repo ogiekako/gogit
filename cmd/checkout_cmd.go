@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"context"
@@ -11,6 +11,10 @@ import (
 	"github.com/google/subcommands"
 	"github.com/ogiekako/gogit/git"
 )
+
+func init() {
+	subcommands.Register(&checkoutCmd{}, "")
+}
 
 type checkoutCmd struct{}
 

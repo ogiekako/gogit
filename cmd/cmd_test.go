@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 	}
 	defer os.RemoveAll(td)
 	prog = filepath.Join(td, "git")
-	b, err := exec.Command("go", "build", "-o", prog).CombinedOutput()
+	b, err := exec.Command("go", "build", "-o", prog, "..").CombinedOutput()
 	if err != nil {
 		panic(string(b) + ": " + err.Error())
 	}
