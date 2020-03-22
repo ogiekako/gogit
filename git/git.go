@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -41,6 +42,85 @@ type Object struct {
 	// blob -> updates Blob
 	// tree -> updates Tree
 	Decode func(data []byte) (*Object, error)
+}
+
+type nameResolutionError struct {
+	name  string
+	cands []string
+}
+
+func (e *nameResolutionError) Error() string {
+	if len(e.cands) == 0 {
+		return fmt.Sprintf("no such reference %s", e.name)
+	} else if len(e.cands) > 1 {
+		return fmt.Sprintf("ambiguous reference %s: candidates are %v", e.name, e.cands)
+	} else {
+		panic(fmt.Sprintf("internal error: %q %q", e.name, e.cands[0]))
+	}
+}
+
+// FindObject finds the matching object.
+// If typ is not the zero value chases until an object with the type if found.
+func FindObject(repo *Repo, name, typ string) (*Object, error) {
+	ss, err := findSHA(repo, name)
+	if err != nil {
+		return nil, err
+	}
+	if len(ss) != 1 {
+		return nil, &nameResolutionError{name, ss}
+	}
+	sha := ss[0]
+	for {
+		o, err := ReadObject(repo, sha)
+		if err != nil {
+			return nil, err
+		}
+		if typ == "" || o.Type == typ {
+			return o, nil
+		}
+		switch o.Type {
+		case "tag":
+			sha = o.KVLM.Get("object")[0]
+		case "commit":
+			sha = o.KVLM.Get("tree")[0]
+		default:
+			return nil, fmt.Errorf("found no object for %s", sha)
+		}
+	}
+}
+
+var shortHashRE = regexp.MustCompile("^[0-9A-Fa-f]{4,16}$")
+
+func findSHA(repo *Repo, name string) ([]string, error) {
+	if name == "HEAD" {
+		sha, err := resolveRef(repo, repo.path("HEAD"))
+		if err != nil {
+			return nil, err
+		}
+		return []string{sha}, nil
+	}
+	if shortHashRE.MatchString(name) {
+		fs, err := filepath.Glob(fmt.Sprintf("%s/%s*", name[0:2], name[2:]))
+		if err != nil {
+			return nil, err
+		}
+		var res []string
+		for _, f := range fs {
+			d := filepath.Dir(f)
+			res = append(res, d[len(d)-2:]+f[len(f)-18:])
+		}
+		return res, nil
+	}
+	var res []string
+	s, err := resolveRef(repo, repo.path("refs", "heads", name))
+	if err == nil {
+		res = append(res, s)
+	}
+	s, err = resolveRef(repo, repo.path("refs", "tags", name))
+	if err == nil {
+		res = append(res, s)
+	}
+	return res, nil
 }
 
 func ReadObject(repo *Repo, sha string) (*Object, error) {
@@ -310,7 +390,7 @@ func newTree(repo *Repo) *Object {
 		repo: repo,
 	}
 	o.Encode = func() []byte {
-		panic("tree encode unimplemented.")
+		return encodeTree(o.Tree)
 	}
 	o.Decode = func(data []byte) (*Object, error) {
 		t, err := parseTree(data)
@@ -355,6 +435,25 @@ func parseTreeEntry(raw []byte, start int) (int, *TreeLeaf, error) {
 	v := big.NewInt(0)
 	sha := v.SetBytes(raw[y+1 : y+21]).Text(16)
 	return y + 21, &TreeLeaf{mode, path, sha}, nil
+}
+
+func encodeTree(t Tree) []byte {
+	var b bytes.Buffer
+	for _, l := range t {
+		v := big.NewInt(0)
+		v.SetString(l.SHA, 16)
+		bs := v.Bytes()
+		var sha []byte
+		for len(sha)+len(bs) < 20 {
+			sha = append(sha, 0)
+		}
+		sha = append(sha, bs...)
+		if len(sha) != 20 {
+			panic(string(l.SHA))
+		}
+		fmt.Fprintf(&b, "%s %s\x00%s", l.Mode, l.Path, string(sha))
+	}
+	return b.Bytes()
 }
 
 func resolveRef(repo *Repo, path string) (string, error) {

@@ -1,0 +1,6 @@
+0000000000000000000000000000000000000000 f6cd3846af74cdaf49efe8874e0ecdf6b8c56327 Keigo Oka <ogiekako@gmail.com> 1584773578 +0900	branch: Created from HEAD^
+f6cd3846af74cdaf49efe8874e0ecdf6b8c56327 6aba443f3b8da367cafd04b17c0d33acbdec8475 Keigo Oka <ogiekako@gmail.com> 1584773615 +0900	merge c: Fast-forward
+6aba443f3b8da367cafd04b17c0d33acbdec8475 0a380ee19ff3c304bd4c6bd8d0000d4c1070b3d3 Keigo Oka <ogiekako@gmail.com> 1584773653 +0900	merge hoge: Merge made by the 'recursive' strategy.
+0a380ee19ff3c304bd4c6bd8d0000d4c1070b3d3 7a7dd58919381869a1e39be3d0c7f45978a3a04f Keigo Oka <ogiekako@gmail.com> 1584785273 +0900	commit: add dir
+7a7dd58919381869a1e39be3d0c7f45978a3a04f fee8dd05f31471dde08c7410b156e9df9e219cc3 Keigo Oka <ogiekako@gmail.com> 1584883589 +0900	commit: support all types for hash-object -t
+fee8dd05f31471dde08c7410b156e9df9e219cc3 7a7dd58919381869a1e39be3d0c7f45978a3a04f Keigo Oka <ogiekako@gmail.com> 1584883619 +0900	reset: moving to HEAD^

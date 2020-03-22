@@ -20,6 +20,7 @@ func main() {
 	subcommands.Register(&checkoutCmd{}, "")
 	subcommands.Register(&showRefCmd{}, "")
 	subcommands.Register(&tagCmd{}, "")
+	subcommands.Register(&revParseCmd{}, "")
 	flag.Parse()
 	os.Exit(int(subcommands.Execute(context.Background())))
 }

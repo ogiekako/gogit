@@ -245,3 +245,23 @@ Dummy commit message.
 		t.Errorf("(-got +want)\n%s", diff)
 	}
 }
+
+func TestRevParse(t *testing.T) {
+	td, cancel := testData(t)
+	defer cancel()
+
+	testutil.Copy(t, filepath.Join(td.dir, ".git"), "testdata/gitdir3")
+
+	for _, tc := range []struct {
+		name, want string
+	}{
+		{"HEAD", "7a7dd58919381869a1e39be3d0c7f45978a3a04f\n"},
+		{"HEAD^{tree}", "2823188337a27d8b30fa3b1876d1e46ef8f4ba57\n"},
+		{"hevy^{commit}", "7a7dd58919381869a1e39be3d0c7f45978a3a04f\n"},
+		{"hevy", "cae02c8b5610cb970fa2f5c16b1a9d53b38221f4\n"},
+	} {
+		if got := run(td, "rev-parse", tc.name); got != tc.want {
+			t.Errorf("%s: got %s; want %s", tc.name, got, tc.want)
+		}
+	}
+}
