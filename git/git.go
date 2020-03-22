@@ -31,13 +31,16 @@ type Object struct {
 	Type string
 	repo *Repo
 
+	// Blob is blob data.
 	Blob []byte
+	// KVLM is commit or tag data.
 	KVLM *kvlm.KVLM
+	// Tree is tree data.
 	Tree Tree
 
-	// Encode encodes itself to bytes.
+	// Encode encodes object to bytes.
 	Encode func() []byte
-	// Decode decodes data and updates a field and returns the object itself.
+	// Decode decodes data and updates an object field and returns the object itself.
 	// commit, tag -> updates KVLM
 	// blob -> updates Blob
 	// tree -> updates Tree
