@@ -29,10 +29,17 @@ type Object struct {
 	Format string
 	repo   *Repo
 
+	Blob []byte
+	KVLM map[string][]string
+	Tree Tree
+
 	// Encode encodes itself to bytes.
 	Encode func() []byte
-	// Decode decodes object into format specific representation.
-	Decode func() interface{}
+	// Decode decodes data and updates a field and returns the object itself.
+	// commit, tag -> updates KVLM
+	// blob -> updates Blob
+	// tree -> updates Tree
+	Decode func(data []byte) (*Object, error)
 }
 
 func ReadObject(repo *Repo, sha string) (*Object, error) {
@@ -64,25 +71,26 @@ func ReadObject(repo *Repo, sha string) (*Object, error) {
 	}
 	switch kind {
 	case "commit":
-		return newCommit(repo, b[y+1:])
+		return newCommit(repo).Decode(b[y+1:])
 	case "tree":
-		return newTree(repo, b[y+1:])
-	// case "tag":
-	// 	return NewTag(repo, b[y+1:])
+		return newTree(repo).Decode(b[y+1:])
+	case "tag":
+		return newTag(repo).Decode(b[y+1:])
 	case "blob":
-		return newBlob(repo, b[y+1:]), nil
+		return newBlob(repo).Decode(b[y+1:])
 	default:
 		return nil, fmt.Errorf("Unknown type %s for object %s", kind, sha)
 	}
 }
 
 // ObjectHash computes object hash from the data, if repo is not nil stores the object into repo.
-func ObjectHash(data []byte, fmt string, repo *Repo) (string, error) {
+func ObjectHash(data []byte, typ string, repo *Repo) (string, error) {
 	var o *Object
-	switch fmt {
+	switch typ {
 	case "blob":
-		o = newBlob(repo, data)
+		o, _ = newBlob(repo).Decode(data)
 	default:
+		return "", fmt.Errorf("ObjectHash: unsupported type %s", typ)
 	}
 	return o.HashData(repo != nil)
 }
@@ -116,35 +124,53 @@ func (o *Object) HashData(write bool) (string, error) {
 }
 
 // newBlob creates a blob object from the object file data.
-func newBlob(repo *Repo, data []byte) *Object {
-	return &Object{
+func newBlob(repo *Repo) *Object {
+	o := &Object{
 		Format: "blob",
 		repo:   repo,
-		Encode: func() []byte {
-			return data
-		},
-		Decode: func() interface{} {
-			return data
-		},
 	}
+	o.Encode = func() []byte {
+		return o.Blob
+	}
+	o.Decode = func(data []byte) (*Object, error) {
+		o.Blob = data
+		return o, nil
+	}
+	return o
 }
 
-// newCommit creates a commit object from the object file data.
-func newCommit(repo *Repo, data []byte) (*Object, error) {
-	kvlm, err := decodeKVLM(string(data))
-	if err != nil {
-		return nil, err
+// newTag creates an empty tag object.
+func newTag(repo *Repo) *Object {
+	o := &Object{
+		Format: "tag",
+		repo:   repo,
 	}
-	return &Object{
+	o.Encode = func() []byte {
+		return []byte(encodeKVLM(o.KVLM))
+	}
+	o.Decode = func(data []byte) (*Object, error) {
+		kvlm, err := decodeKVLM(string(data))
+		o.KVLM = kvlm
+		return o, err
+	}
+	return o
+}
+
+// newCommit creates an empty commit object.
+func newCommit(repo *Repo) *Object {
+	o := &Object{
 		Format: "commit",
 		repo:   repo,
-		Encode: func() []byte {
-			return data
-		},
-		Decode: func() interface{} {
-			return kvlm
-		},
-	}, nil
+	}
+	o.Encode = func() []byte {
+		return []byte(encodeKVLM(o.KVLM))
+	}
+	o.Decode = func(data []byte) (*Object, error) {
+		kvlm, err := decodeKVLM(string(data))
+		o.KVLM = kvlm
+		return o, err
+	}
+	return o
 }
 
 // WriteLog writes log to w in graphvis format.
@@ -172,7 +198,7 @@ func writeLog(w io.Writer, repo *Repo, sha string) error {
 	if o.Format != "commit" {
 		return fmt.Errorf("format %s != commit", o.Format)
 	}
-	m := o.Decode().(map[string][]string)
+	m := o.KVLM
 	for _, p := range m["parent"] {
 		fmt.Fprintf(w, "c_%s -> c_%s\n", sha, p)
 		if err := writeLog(w, repo, p); err != nil {
@@ -265,21 +291,24 @@ func defaultConfig() *ini.File {
 	return f
 }
 
-func newTree(repo *Repo, data []byte) (*Object, error) {
-	t, err := parseTree(data)
-	if err != nil {
-		return nil, err
-	}
-	return &Object{
+// newTree craetes an empty tree object.
+func newTree(repo *Repo) *Object {
+	o := &Object{
 		Format: "tree",
 		repo:   repo,
-		Encode: func() []byte {
-			return data
-		},
-		Decode: func() interface{} {
-			return t
-		},
-	}, nil
+	}
+	o.Encode = func() []byte {
+		panic("tree encode unimplemented.")
+	}
+	o.Decode = func(data []byte) (*Object, error) {
+		t, err := parseTree(data)
+		if err != nil {
+			return nil, err
+		}
+		o.Tree = t
+		return o, nil
+	}
+	return o
 }
 
 type Tree []*TreeLeaf

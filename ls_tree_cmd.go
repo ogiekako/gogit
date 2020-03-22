@@ -40,7 +40,7 @@ func lsTree(sha string) error {
 	if o.Format != "tree" {
 		return fmt.Errorf("format %s != tree", o.Format)
 	}
-	tree := o.Decode().(git.Tree)
+	tree := o.Tree
 	for _, c := range tree {
 		pad := ""
 		if len(c.Mode) == 5 {
