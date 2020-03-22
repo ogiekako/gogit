@@ -25,9 +25,9 @@ func init() {
 
 // Object represents a git object.
 type Object struct {
-	// Format is blob, commit, tag or tree.
-	Format string
-	repo   *Repo
+	// Type is blob, commit, tag or tree.
+	Type string
+	repo *Repo
 
 	Blob []byte
 	KVLM map[string][]string
@@ -59,7 +59,7 @@ func ReadObject(repo *Repo, sha string) (*Object, error) {
 		return nil, err
 	}
 	x := bytes.IndexByte(b, ' ')
-	kind := string(b[0:x])
+	typ := string(b[0:x])
 
 	y := bytes.IndexByte(b[x:], '\x00') + x
 	size, err := strconv.Atoi(string(b[x+1 : y]))
@@ -69,7 +69,7 @@ func ReadObject(repo *Repo, sha string) (*Object, error) {
 	if size != len(b)-y-1 {
 		return nil, fmt.Errorf("Malformed object %s: bad length", sha)
 	}
-	switch kind {
+	switch typ {
 	case "commit":
 		return newCommit(repo).Decode(b[y+1:])
 	case "tree":
@@ -79,7 +79,7 @@ func ReadObject(repo *Repo, sha string) (*Object, error) {
 	case "blob":
 		return newBlob(repo).Decode(b[y+1:])
 	default:
-		return nil, fmt.Errorf("Unknown type %s for object %s", kind, sha)
+		return nil, fmt.Errorf("Unknown type %s for object %s", typ, sha)
 	}
 }
 
@@ -101,7 +101,7 @@ func ObjectHash(data []byte, typ string, repo *Repo) (string, error) {
 func (o *Object) HashData(write bool) (string, error) {
 	data := o.Encode()
 	hash := sha1.New()
-	result := fmt.Sprintf("%s %d\x00%s", o.Format, len(data), data)
+	result := fmt.Sprintf("%s %d\x00%s", o.Type, len(data), data)
 	fmt.Fprint(hash, result)
 	sha := hex.EncodeToString(hash.Sum(nil))
 
@@ -126,8 +126,8 @@ func (o *Object) HashData(write bool) (string, error) {
 // newBlob creates a blob object from the object file data.
 func newBlob(repo *Repo) *Object {
 	o := &Object{
-		Format: "blob",
-		repo:   repo,
+		Type: "blob",
+		repo: repo,
 	}
 	o.Encode = func() []byte {
 		return o.Blob
@@ -142,8 +142,8 @@ func newBlob(repo *Repo) *Object {
 // newTag creates an empty tag object.
 func newTag(repo *Repo) *Object {
 	o := &Object{
-		Format: "tag",
-		repo:   repo,
+		Type: "tag",
+		repo: repo,
 	}
 	o.Encode = func() []byte {
 		return []byte(encodeKVLM(o.KVLM))
@@ -159,8 +159,8 @@ func newTag(repo *Repo) *Object {
 // newCommit creates an empty commit object.
 func newCommit(repo *Repo) *Object {
 	o := &Object{
-		Format: "commit",
-		repo:   repo,
+		Type: "commit",
+		repo: repo,
 	}
 	o.Encode = func() []byte {
 		return []byte(encodeKVLM(o.KVLM))
@@ -195,8 +195,8 @@ func writeLog(w io.Writer, repo *Repo, sha string) error {
 	if err != nil {
 		return err
 	}
-	if o.Format != "commit" {
-		return fmt.Errorf("format %s != commit", o.Format)
+	if o.Type != "commit" {
+		return fmt.Errorf("type %s != commit", o.Type)
 	}
 	m := o.KVLM
 	for _, p := range m["parent"] {
@@ -294,8 +294,8 @@ func defaultConfig() *ini.File {
 // newTree craetes an empty tree object.
 func newTree(repo *Repo) *Object {
 	o := &Object{
-		Format: "tree",
-		repo:   repo,
+		Type: "tree",
+		repo: repo,
 	}
 	o.Encode = func() []byte {
 		panic("tree encode unimplemented.")

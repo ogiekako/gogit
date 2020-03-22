@@ -57,7 +57,7 @@ func checkout(sha, path string) error {
 	if err != nil {
 		return err
 	}
-	if o.Format == "commit" {
+	if o.Type == "commit" {
 		m := o.KVLM
 		o, err = git.ReadObject(r, m["tree"][0])
 		if err != nil {
@@ -68,8 +68,8 @@ func checkout(sha, path string) error {
 }
 
 func checkoutTree(repo *git.Repo, tree *git.Object, path string) error {
-	if tree.Format != "tree" {
-		return fmt.Errorf("format %s != tree", tree.Format)
+	if tree.Type != "tree" {
+		return fmt.Errorf("format %s != tree", tree.Type)
 	}
 	for _, c := range tree.Tree {
 		o, err := git.ReadObject(repo, c.SHA)
@@ -77,7 +77,7 @@ func checkoutTree(repo *git.Repo, tree *git.Object, path string) error {
 			return err
 		}
 		dest := filepath.Join(path, c.Path)
-		switch o.Format {
+		switch o.Type {
 		case "blob":
 			if err := ioutil.WriteFile(dest, o.Blob, 0644); err != nil {
 				return err

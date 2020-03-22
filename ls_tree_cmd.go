@@ -37,8 +37,8 @@ func lsTree(sha string) error {
 	if err != nil {
 		return err
 	}
-	if o.Format != "tree" {
-		return fmt.Errorf("format %s != tree", o.Format)
+	if o.Type != "tree" {
+		return fmt.Errorf("format %s != tree", o.Type)
 	}
 	tree := o.Tree
 	for _, c := range tree {
@@ -50,7 +50,7 @@ func lsTree(sha string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("%s%s %s %s\t%s\n", pad, string(c.Mode), o.Format, c.SHA, string(c.Path))
+		fmt.Printf("%s%s %s %s\t%s\n", pad, string(c.Mode), o.Type, c.SHA, string(c.Path))
 	}
 	return nil
 }
