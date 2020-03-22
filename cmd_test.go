@@ -127,6 +127,11 @@ func TestHashObject(t *testing.T) {
 	if _, err := os.Stat(objPath); err != nil {
 		t.Errorf("%s not exists: %v", objPath, err)
 	}
+
+	testutil.Copy(t, filepath.Join(td.dir, "a.tag"), "testdata/a.tag")
+	if got, want := run(td, "hash-object", "-t", "tag", "a.tag"), "6521f7bf9c42c397be87988657092931e32ca56f\n"; got != want {
+		t.Errorf("got %s; want %s", got, want)
+	}
 }
 func TestLog(t *testing.T) {
 	td, cancel := testData(t)

@@ -86,11 +86,21 @@ func ReadObject(repo *Repo, sha string) (*Object, error) {
 // ObjectHash computes object hash from the data, if repo is not nil stores the object into repo.
 func ObjectHash(data []byte, typ string, repo *Repo) (string, error) {
 	var o *Object
+	var err error
 	switch typ {
+	case "commit":
+		o, err = newCommit(repo).Decode(data)
+	case "tree":
+		o, err = newTree(repo).Decode(data)
+	case "tag":
+		o, err = newTag(repo).Decode(data)
 	case "blob":
-		o, _ = newBlob(repo).Decode(data)
+		o, err = newBlob(repo).Decode(data)
 	default:
 		return "", fmt.Errorf("ObjectHash: unsupported type %s", typ)
+	}
+	if err != nil {
+		return "", err
 	}
 	return o.HashData(repo != nil)
 }
