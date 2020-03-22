@@ -17,7 +17,7 @@ func (*showRefCmd) Name() string             { return "show-ref" }
 func (*showRefCmd) Synopsis() string         { return "git show-ref" }
 func (*showRefCmd) Usage() string            { return "git show-ref object" }
 func (*showRefCmd) SetFlags(f *flag.FlagSet) {}
-func (c *showRefCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*showRefCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	if err := showRef(); err != nil {
 		fmt.Fprintln(os.Stderr, "show-ref: ", err)
 		return subcommands.ExitFailure

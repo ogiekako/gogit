@@ -15,11 +15,11 @@ type logCmd struct {
 	write bool
 }
 
-func (*logCmd) Name() string               { return "log" }
-func (*logCmd) Synopsis() string           { return "git log" }
-func (*logCmd) Usage() string              { return "git log [object]\n" }
-func (c *logCmd) SetFlags(f *flag.FlagSet) {}
-func (c *logCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+func (*logCmd) Name() string             { return "log" }
+func (*logCmd) Synopsis() string         { return "git log" }
+func (*logCmd) Usage() string            { return "git log [object]\n" }
+func (*logCmd) SetFlags(f *flag.FlagSet) {}
+func (*logCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	sha := f.Arg(0)
 	if sha == "" {
 		sha = "HEAD"
