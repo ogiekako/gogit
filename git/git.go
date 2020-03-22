@@ -441,7 +441,12 @@ func parseTreeEntry(raw []byte, start int) (int, *TreeLeaf, error) {
 	path := string(raw[x+1 : y])
 
 	v := big.NewInt(0)
-	sha := v.SetBytes(raw[y+1 : y+21]).Text(16)
+	hex := v.SetBytes(raw[y+1 : y+21]).Text(16)
+	var sha string
+	for len(sha)+len(hex) < 40 {
+		sha += "0"
+	}
+	sha += hex
 	return y + 21, &TreeLeaf{mode, path, sha}, nil
 }
 

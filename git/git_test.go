@@ -26,6 +26,7 @@ func TestEncodeTree(t *testing.T) {
 	tr := Tree([]*TreeLeaf{
 		&TreeLeaf{"100644", "a", "2262de0c121f22df8e78f5a37d6e114fd322c0b0"},
 		&TreeLeaf{"40000", "hoge", "496d6428b9cf92981dc9495211e6e1120fb6f2ba"},
+		&TreeLeaf{"40000", "zero", "0000000000000000000000000000000000000000"},
 	})
 	raw := encodeTree(tr)
 	got, err := parseTree(raw)
